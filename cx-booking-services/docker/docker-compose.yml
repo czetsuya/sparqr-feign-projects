@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  database-iam:
+    image: postgres:14.1
+    container_name: db-booking
+    restart: "no"
+    ports:
+      - "54323:5432"
+    environment:
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: db_user_123
+      POSTGRES_DB: cx_bookings

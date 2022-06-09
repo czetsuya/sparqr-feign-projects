@@ -1,0 +1,45 @@
+## Development configuration
+server:
+  port: 8080
+
+logging:
+  level:
+    root: ERROR
+    com.sparqr: DEBUG
+    org.springframework: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: ERROR
+    org.apache.http: WARN
+    com.github: ERROR
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:54321/cx_iam_users}
+    username: ${DB_USERNAME:db_user}
+    password: ${DB_PASSWORD:db_user_123}
+  sql:
+    init:
+      mode: always
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/tests
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+    enabled: true
+
+springdoc:
+  api-docs:
+    path: swagger-ui.html
+
+cloud:
+  aws:
+    enable: false
+    cognito:
+      region: ap-southeast-1
+      userPoolId:  ap-southeast-1_2nJajWD9s
+      userAttribute:
+        alias: "custom:userAlias"

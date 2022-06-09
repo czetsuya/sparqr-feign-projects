@@ -1,0 +1,21 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ xxx ]
+  pull_request:
+    branches: [ xxx ]
+    types: [ opened, reopened, synchronize, edited, ready_for_review ]
+
+jobs:
+  ci:
+    uses: sparqr/ghactions/.github/workflows/ci.yml@main
+    with:
+      has-image: true
+      image-containerfile: ./docker/Dockerfile
+      image-build-context: ./
+      java-version: 17
+    secrets:
+      app-id: ${{ secrets.CX_RELEASE_APP_ID }}
+      app-private-key: ${{ secrets.CX_RELEASE_APP_PRIVATE_KEY }}
+      token: ${{ secrets.GH_PKG_TOKEN }}

@@ -1,0 +1,162 @@
+name: Version
+
+on:
+  workflow_call:
+    inputs:
+      bump:
+        description: Specify if the version must be bumped
+        type: boolean
+        default: false
+        required: false
+      git-semver-options:
+        description: Extra options for the git-semver tool
+        required: false
+        type: string
+    outputs:
+      latest:
+        description: Latest Version
+        value: ${{ jobs.version.outputs.latest  }}
+      next:
+        description: Next Version
+        value: ${{ jobs.version.outputs.next  }}
+      incrementable:
+        description: Whether the project is incrementable or not
+        value: ${{ jobs.validate.outputs.incrementable }}
+    secrets:
+      app-access-token:
+        description: Access token
+        required: true
+      app-id: 
+        description: App ID
+        required: false
+      app-private-key: 
+        description: App Private Key
+        required: false
+      git-name: 
+        description: User's git name
+        required: true
+      git-email: 
+        description: User's Git email
+        required: true
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    outputs:
+      latest: ${{ steps.semver.outputs.latest }}
+      next: ${{ steps.semver.outputs.next }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - id: semver
+        name: SemVer
+        run: |
+          brew install sparqr/tap/git-semver
+          LATEST=$(git semver latest)
+          NEXT=$(git semver next)
+          echo "::set-output name=latest::$LATEST"
+          echo "::set-output name=next::$NEXT"
+          echo "::notice title=Latest Version::$LATEST"
+          echo "::notice title=Next Version::$NEXT"
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: "${{ secrets.app-access-token }}"
+
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    needs: version
+    outputs:
+      incrementable: ${{ steps.validation.outputs.incrementable }}
+    steps:
+      - id: validation
+        name: Validation
+        run: |
+          INCREMENTABLE=1
+
+          if [[ "${{ needs.version.outputs.latest }}" == "${{ needs.version.outputs.next }}" ]]; then
+            INCREMENTABLE=0
+            echo "::warning ::No incrementation detected..."
+          fi
+
+          echo "::set-output name=incrementable::$INCREMENTABLE"
+
+  bump:
+    name: Bump
+    runs-on: ubuntu-latest
+    needs: [version, validate]
+    if: inputs.bump == true && needs.validate.outputs.incrementable == true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - id: detect-type
+        name: Detect Type
+        run: |
+          if test -f "pom.xml"; then
+            TYPE=maven
+          elif test -f "Pipfile.lock"; then
+            TYPE=python
+          elif test -f "yarn.lock"; then
+            TYPE=yarn
+          elif test -f "package-lock.json"; then
+            TYPE=npm
+          fi
+
+          if [[ $TYPE == "" ]]; then
+            echo "::notice ::Could not detect a project type"
+          fi
+
+          echo "::set-output name=type::$TYPE"
+          echo "::notice ::Project Type: $TYPE"
+
+      - name: Configure Git 
+        run: |
+          git config --global user.name "${{ secrets.git-name }}"
+          git config --global user.email "${{ secrets.git-email }}"
+
+      - id: app-token
+        name: Authenticate App
+        uses: getsentry/action-github-app-token@v1
+        if: steps.detect-type.outputs.type == 'npm' || steps.detect-type.outputs.type == 'yarn' || steps.detect-type.outputs.type == ''
+        with:
+          app_id: ${{ secrets.app-id }}
+          private_key: '${{ secrets.app-private-key }}'
+
+      - name: Bump (Maven)
+        if: steps.detect-type.outputs.type == 'maven'
+        run: mvn versions:set -DnewVersion=${{ needs.version.outputs.next }} -DgenerateBackupPoms=false
+
+      - name: Bump (NPM/YARN)
+        if: steps.detect-type.outputs.type == 'npm' || steps.detect-type.outputs.type == 'yarn'
+        run: | 
+          brew install sparqr/tap/git-semver
+          git checkout -b release/${{ needs.version.outputs.next }}
+          git push -u origin release/${{ needs.version.outputs.next }}
+          git semver bump --skip-tag -u ${{ secrets.git-name }} -P ${{ steps.app-token.outputs.token }} -f "package.json:version" ${{ inputs.git-semver-options }}
+
+      - name: Bump (Python)
+        if: steps.detect-type.outputs.type == 'python'
+        run: | 
+          git checkout -b release/${{ needs.version.outputs.next }}
+          git push -u origin release/${{ needs.version.outputs.next }}
+
+      - name: Bump (unknown)
+        if: steps.detect-type.outputs.type == ''
+        run: | 
+          brew install sparqr/tap/git-semver
+          git semver bump -u ${{ secrets.git-name }} -P ${{ steps.app-token.outputs.token }} ${{ inputs.git-semver-options }}
+
+      - name: Create Branch
+        if: steps.detect-type.outputs.type == 'maven'
+        run: |
+          git checkout -b release/${{ needs.version.outputs.next }}
+          git commit -am "bump: ${{ needs.version.outputs.latest }} -> ${{ needs.version.outputs.next }}" -m "[skip ci]"
+          git push -u origin release/${{ needs.version.outputs.next }}
+
+

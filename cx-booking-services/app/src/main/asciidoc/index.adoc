@@ -1,0 +1,21 @@
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toc-title: Index
+:toclevels: 4
+:sectlinks:
+:sectnums:
+:sectnumlevels: 5
+:page-layout: docs
+
+= Booking Services Documentation
+
+This is the REST API documentation for booking Services.
+
+[[Signon]]
+== SSO Signon and Platform User Creation
+
+include::{snippets}/users/signOnSuccess200/auto-section.adoc[]
+include::{snippets}/users/createSsoAndPlatformUser200/auto-section.adoc[]
+include::{snippets}/users/mapSsoToPlatformUser200/auto-section.adoc[]

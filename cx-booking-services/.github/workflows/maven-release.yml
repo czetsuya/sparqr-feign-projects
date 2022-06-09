@@ -1,0 +1,52 @@
+name: Release
+
+on:
+  push:
+    branches: [xxx]
+
+jobs:
+  version:
+    uses: ./.github/workflows/version.yml
+    with:
+      bump: true
+    secrets:
+      git-name: ${{ secrets.RELEASE_APP_USER_NAME }}
+      git-email: ${{ secrets.RELEASE_APP_USER_EMAIL }}
+      app-id: ${{ secrets.RELEASE_APP_ID }}
+      app-private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+      app-access-token: ${{ secrets.RELEASE_APP_ACCESS_TOKEN }}
+
+  build:
+    uses: ./.github/workflows/build.yml
+    needs: version
+    if: needs.version.outputs.incrementable == true
+    with:
+      branch: release/${{ needs.version.outputs.next }}
+      publish: true
+      java-version: 17
+    secrets:
+      token: ${{ secrets.RELEASE_APP_ACCESS_TOKEN }}
+
+  image:
+    uses: ./.github/workflows/image.yml
+    needs: [ version, build ]
+    with:
+      version: ${{ needs.version.outputs.next }}
+      containerfile: ./docker/Dockerfile
+    secrets:
+      aws-access-key-id-dev: ${{ secrets.AWS_ACCESS_KEY_ID_DEV }}
+      aws-secret-access-key-dev: ${{ secrets.AWS_SECRET_ACCESS_KEY_DEV }}
+      release-app-id: ${{ secrets.RELEASE_APP_ID }}
+      release-app-private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+  release:
+    uses: ./.github/workflows/release.yml
+    needs: [version, build, image]
+    with:
+      version: ${{ needs.version.outputs.next }}
+      previous-version: ${{ needs.version.outputs.latest }}
+    secrets:
+      git-name: ${{ secrets.RELEASE_APP_USER_NAME }}
+      git-email: ${{ secrets.RELEASE_APP_USER_EMAIL }}
+      app-id: ${{ secrets.RELEASE_APP_ID }}
+      app-private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}

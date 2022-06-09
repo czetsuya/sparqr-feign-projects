@@ -1,0 +1,54 @@
+:doctype: book
+:icons: font
+:source-highlighter: highlightjs
+:toc: left
+:toc-title: Index
+:toclevels: 4
+:sectlinks:
+:sectnums:
+:sectnumlevels: 5
+:page-layout: docs
+
+= IAM Services Documentation
+
+This is the REST API documentation for User Services.
+
+[[Signon]]
+== SSO Signon and Platform User Creation
+
+include::{snippets}/users/signOnSuccess200/auto-section.adoc[]
+include::{snippets}/users/createSsoAndPlatformUser200/auto-section.adoc[]
+include::{snippets}/users/mapSsoToPlatformUser200/auto-section.adoc[]
+
+[[Users]]
+== Update User and Profile
+include::{snippets}/users/updateUserAndProfile200/auto-section.adoc[]
+include::{snippets}/users/updateUserAndCreateProfile200/auto-section.adoc[]
+
+[[Alias]]
+== Update User Alias
+include::{snippets}/users/updateUserAlias200/auto-section.adoc[]
+include::{snippets}/users/updateUserAlias400/auto-section.adoc[]
+
+[[Certifications]]
+== Certifications
+include::{snippets}/users/certifications/createUserCertification200/auto-section.adoc[]
+include::{snippets}/users/certifications/updateUserCertification200/auto-section.adoc[]
+include::{snippets}/users/certifications/deleteUserCertification204/auto-section.adoc[]
+
+[[Languages]]
+== Languages
+include::{snippets}/users/languages/createUserLanguage200/auto-section.adoc[]
+include::{snippets}/users/languages/updateUserLanguage200/auto-section.adoc[]
+include::{snippets}/users/languages/deleteUserLanguage204/auto-section.adoc[]
+
+[[Educations]]
+== Educations
+include::{snippets}/users/educations/createUserEducation200/auto-section.adoc[]
+include::{snippets}/users/educations/updateUserEducation200/auto-section.adoc[]
+include::{snippets}/users/educations/deleteUserEducation204/auto-section.adoc[]
+
+[[Skills]]
+== Skills
+include::{snippets}/users/skills/createUserSkills200/auto-section.adoc[]
+include::{snippets}/users/skills/getUserSkills200/auto-section.adoc[]

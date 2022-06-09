@@ -1,0 +1,125 @@
+## Logging
+logging:
+  level:
+    ROOT: INFO
+    com.sparqr: INFO
+    org.springframework: ERROR
+    org.hibernate.SQL: ERROR
+    org.hibernate.type.descriptor.sql.BasicBinder: ERROR
+    org.zalando.logbook: ${LOGBOOK_LOG_LEVEL:TRACE}
+
+## Application server
+server:
+  port: ${SERVER_PORT:80}
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/hal+json,application/problem+json
+
+## Actuator
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: health,prometheus,flyway,httptrace,info
+      cors:
+        allowed-origins: "*"
+        allowed-methods: GET
+    jmx:
+      exposure:
+        exclude=*:
+  endpoint:
+    health:
+      enabled: true
+    prometheus:
+      enabled: true
+    flyway:
+      enabled: true
+    httptrace:
+      enabled: true
+    info:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  info:
+    git:
+      enabled: true
+      mode: simple
+
+## Spring configuration
+spring:
+  application:
+    name: booking-services
+  ## Default datasource -db
+  datasource:
+    type: com.zaxxer.hikari.HikariDataSource
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      connection-test-query: SELECT 1
+      jdbc-url: ${spring.datasource.url}
+      maximum-pool-size: 20
+      minimum-idle: 10
+      pool-name: booking-data
+      username: ${spring.datasource.username}
+      password: ${spring.datasource.password}
+
+  # Flyway
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    user: ${DB_ADMIN_USERNAME}
+    password: ${DB_ADMIN_PASSWORD}
+
+  ## General jpa configuration
+  jpa:
+    database: default # let spring decide what dialect we're talking
+    generate-ddl: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        enable_lazy_load_no_trans: true # This anti-pattern/trade-off is only set to unblock further development
+        # TODO Apply ThreadLocal sessions
+        format_sql: true
+        jdbc:
+          time_zone: "UTC"
+    open-in-view: false
+  sql:
+    init:
+      mode: always
+
+feign:
+  httpclient:
+    enabled: true
+    connection-timeout: 5000
+  client:
+    compression:
+      response:
+        enabled: true
+      request:
+        enabled: true
+
+## Global configurations
+common:
+  date-format: "yyyy-MM-dd"
+  datetime-format: "yyyy-MM-dd HH:mm:ss"
+
+springdoc:
+  api-docs:
+    path: swagger-ui.html
+
+app:
+  cx:
+    aws:
+      feign:
+        enabled: true
+    client:
+      gig-services:
+        url: ${GIG_SERVICES_URL:http://localhost:8002}

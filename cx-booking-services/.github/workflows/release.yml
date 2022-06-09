@@ -1,0 +1,151 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+        description: Version to Release
+      previous-version:
+        type: string
+        required: false
+        description: Previous Released Version
+      has-artifacts:
+        type: boolean
+        default: false
+        required: false
+        description: Has Artifacts
+    secrets:
+      app-id:
+        description: App ID
+        required: true
+      app-private-key:
+        description: App Private Key
+        required: true
+      git-name:
+        description: User's Git name
+        required: false
+      git-email:
+        description: User's Git email
+        required: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    outputs:
+      type: ${{ steps.detect-type.outputs.type }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: release/${{ inputs.version }}
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v3
+        if: ${{ inputs.has-artifacts }}
+        with:
+          name: artifacts
+          path: artifacts
+
+      - id: detect-type
+        name: Detect Type
+        run: |
+          if test -f "pom.xml"; then
+            TYPE=maven
+          elif test -f "Pipfile.lock"; then
+            TYPE=python
+          fi
+
+          echo "::set-output name=type::$TYPE"
+          echo "::notice ::Project Type: $TYPE"
+          echo "::notice ::Test Changes: $TYPE"
+
+      - id: app-token
+        name: Authenticate App
+        uses: getsentry/action-github-app-token@v1
+        with:
+          app_id: ${{ secrets.app-id }}
+          private_key: "${{ secrets.app-private-key }}"
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ secrets.git-name }}"
+          git config --global user.email "${{ secrets.git-email }}"
+
+      - name: Create PR
+        if: steps.detect-type.outputs.type != 'python'
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token  }}
+        run: |
+          gh pr create --fill --base main --head release/${{ inputs.version }}
+          gh pr merge --rebase --admin --delete-branch
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token  }}
+        run: |
+          if [[ "${{ steps.detect-type.outputs.type }}" != "python" ]]; then
+            git checkout main
+            git pull
+
+            # Create tag and push to remote
+            git tag ${{ inputs.version }} -m "Release ${{ inputs.version }}"
+            git push origin ${{ inputs.version }}
+
+            # Generate release notes
+            RELEASE_NOTES=$(gh api /repos/${{ github.repository }}/releases/generate-notes -f tag_name=${{ inputs.version }} -f previous_tag_name=${{ inputs.previous-version }} -q '.body')
+
+            # Create GitHub Release
+            if [[ "${{ inputs.has-artifacts }}" == "true"  ]]; then
+              gh release create ${{ inputs.version }} --title ${{ inputs.version  }} --notes "$RELEASE_NOTES" ./artifacts/*
+            else
+              gh release create ${{ inputs.version }} --title ${{ inputs.version  }} --notes "$RELEASE_NOTES"
+            fi
+          
+            # Delete remote release branch
+            git push origin --delete release/${{ inputs.version }} || true
+          elif [[ "${{ steps.detect-type.outputs.type }}" == "python" ]]; then
+            gh release create ${{ inputs.version }} --generate-notes
+          else
+            gh release create ${{ inputs.version }} --generate-notes ./artifacts/*
+          fi
+
+  cleanup:
+    name: Clean Up
+    runs-on: ubuntu-latest
+    needs: release
+    if: needs.release.outputs.type == 'maven'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: main
+
+      - id: app-token
+        name: Authenticate App
+        uses: getsentry/action-github-app-token@v1
+        with:
+          app_id: ${{ secrets.app-id }}
+          private_key: '${{ secrets.app-private-key }}'
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "${{ secrets.git-name }}"
+          git config --global user.email "${{ secrets.git-email }}"
+
+      - name: Maven
+        env:
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token  }}
+        run: |
+          git checkout -b cleanup/${{ inputs.version }}
+          mvn versions:set -DnewVersion=LATEST-SNAPSHOT -DgenerateBackupPoms=false
+          git commit -am "bump: ${{ inputs.version }} -> LATEST-SNAPSHOT" -m "[skip ci]"
+          git push -u origin cleanup/${{ inputs.version }}
+          sleep 1
+          gh pr create --fill --base main --head cleanup/${{ inputs.version }}
+          sleep 1
+          gh pr merge --rebase --admin --delete-branch
+
+

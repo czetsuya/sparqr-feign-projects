@@ -1,0 +1,187 @@
+name: Image
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+        description: Version to tag the image with
+      containerfile:
+        type: string
+        default: ./Dockerfile
+        description: Path to Containerfile
+      context:
+        type: string
+        default: .
+        description: Context to build the image
+      repository:
+        type: string
+        description: Image's repository
+      skip-scan:
+        type: boolean
+        default: false
+        description: Skip image analysis
+      skip-publish:
+        type: boolean
+        default: false
+        description: Skip publishing image to AWS ECR
+
+    secrets:
+      aws-access-key-id-dev:
+        description: AWS Access Key ID (DEV)
+        required: false
+      aws-secret-access-key-dev:
+        description: AWS Secret Access Key (DEV)
+        required: false
+      release-app-id:
+        description: Release App ID
+        required: false
+      release-app-private-key:
+        description: Release App Private Key
+        required: false
+
+jobs:
+  setup:
+    name: Setup
+    runs-on: ubuntu-latest
+    outputs:
+      repo: ${{ steps.setup.outputs.repo }}
+      image: ${{ steps.setup.outputs.image }}
+    steps:
+      - id: setup
+        run: |
+          repository="${{ inputs.repository }}"
+
+          if [[ "$repository" = "" ]]; then
+            repository=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+          fi
+          
+          repository=$(echo "$repository" | tr '[:upper:]' '[:lower:]')
+          
+          echo "::set-output name=repo::$repository"
+          echo "::set-output name=image::$repository:${{ inputs.version }}"
+
+  build-image:
+    name: Build Image
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: artifacts
+          path: .
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build
+        uses: docker/build-push-action@v2
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.containerfile }}
+          tags: ${{ needs.setup.outputs.image }}
+          outputs: type=docker,dest=/tmp/image.tar
+
+      - name: Upload Image
+        uses: actions/upload-artifact@v3
+        with:
+          retention-days: 1
+          name: image
+          path: /tmp/image.tar
+
+  analyze-image:
+    name: Analyze Image
+    runs-on: ubuntu-latest
+    needs: [setup, build-image]
+    if: inputs.skip-scan != true
+    steps:
+      # Checkout required because of https://github.com/github/codeql-action/issues/952
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download Image
+        uses: actions/download-artifact@v3
+        with:
+          name: image
+          path: /tmp
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Load Image
+        run: |
+          docker load --input /tmp/image.tar
+          docker image ls -a
+
+      - id: scan
+        name: Scan Image
+        uses: aquasecurity/trivy-action@master
+        continue-on-error: true
+        with:
+          image-ref: ${{ needs.setup.outputs.image }}
+          format: sarif
+          output: report.sarif
+          exit-code: 0
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Scan Report to GHAS (SARIF)
+        uses: github/codeql-action/upload-sarif@v1
+        with:
+          sarif_file: report.sarif
+
+      - name: Upload Scan Report to GHA (SARIF)
+        uses: actions/upload-artifact@v3
+        with:
+          name: image-sarif-report
+          path: report.sarif
+
+      - name: Fail on Vulnerabilities
+        if: failure()
+        run: exit 1
+
+  publish-image-aws-ecr:
+    name: Publish Image (AWS ECR)
+    runs-on: ubuntu-latest
+    needs: [setup, build-image]
+    if: inputs.skip-publish != true
+    steps:
+      - name: Download Image
+        uses: actions/download-artifact@v3
+        with:
+          name: image
+          path: /tmp
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Load Image
+        run: |
+          docker load --input /tmp/image.tar
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id-dev }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key-dev }}
+          aws-region: eu-west-1
+
+      - id: login-ecr
+        name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Push Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ needs.setup.outputs.repo }}
+          IMAGE: ${{ needs.setup.outputs.image }}
+        run: |
+          docker tag "$IMAGE" "$ECR_REGISTRY/$IMAGE"
+          docker push "$ECR_REGISTRY/$IMAGE"
+          echo "::notice ::Pushed image to AWS ECR: $ECR_REGISTRY/$IMAGE"

@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>2.6.6</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent>
+
+  <groupId>com.sparqr</groupId>
+  <artifactId>cx-be-parent</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>cx-be-parent</name>
+
+  <properties>
+    <java.version>17</java.version>
+    <maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
+    <maven-resources-plugin.version>3.2.0</maven-resources-plugin.version>
+    <maven-surefire-report-plugin.version>3.0.0-M5</maven-surefire-report-plugin.version>
+    <spring-cloud.version>2021.0.1</spring-cloud.version>
+    <feign.json.version>11.8</feign.json.version>
+
+    <!-- External Services -->
+    <cx.iam.client.version>0.0.1-SNAPSHOT</cx.iam.client.version>
+    <cx.gig.client.version>0.0.1-SNAPSHOT</cx.gig.client.version>
+    <cx.booking.client.version>0.0.1-SNAPSHOT</cx.booking.client.version>
+    <cx.traceability.version>0.4.0</cx.traceability.version>
+
+    <!-- Plugins -->
+    <lombok-maven-plugin.version>1.18.20.0</lombok-maven-plugin.version>
+    <jacoco.version>0.8.7</jacoco.version>
+    <asciidoc-confluence-publisher.version>0.15.1</asciidoc-confluence-publisher.version>
+    <springdoc-openapi-ui.version>1.5.10</springdoc-openapi-ui.version>
+    <spring-auto-restdocs.version>2.0.11</spring-auto-restdocs.version>
+    <asciidoctor-maven-plugin.version>2.2.1</asciidoctor-maven-plugin.version>
+
+    <!-- Configs -->
+    <delombok.output>${project.build.directory}/delombok</delombok.output>
+    <snippets.directory>${project.build.directory}/generated-snippets</snippets.directory>
+
+    <!-- 3rd Parties -->
+    <logbook.version>2.14.0</logbook.version>
+    <flyway.version>8.2.0</flyway.version>
+    <mapstruct.version>1.4.2.Final</mapstruct.version>
+    <validation-api.version>2.0.1.Final</validation-api.version>
+    <zalando.problem.version>0.26.0</zalando.problem.version>
+    <zalando.problem-spring-web.version>0.27.0</zalando.problem-spring-web.version>
+
+    <!-- Testing -->
+    <testcontainers.version>1.16.2</testcontainers.version>
+  </properties>
+
+  <modules>
+    <module>api</module>
+    <module>app</module>
+    <!--    <module>client</module>-->
+  </modules>
+
+  <repositories>
+    <repository>
+      <id>central</id>
+      <url>https://repo1.maven.org/maven2/</url>
+    </repository>
+    <repository>
+      <id>github</id>
+      <url>https://maven.pkg.github.com/sparqr/packages</url>
+    </repository>
+  </repositories>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Spring Cloud -->
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <!-- Web -->
+      <dependency>
+        <groupId>org.zalando</groupId>
+        <artifactId>problem</artifactId>
+        <version>${zalando.problem.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.zalando</groupId>
+        <artifactId>problem-spring-web</artifactId>
+        <version>${zalando.problem-spring-web.version}</version>
+      </dependency>
+
+      <!-- Toolkit -->
+      <dependency>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-ui</artifactId>
+        <version>${springdoc-openapi-ui.version}</version>
+      </dependency>
+
+      <!-- Validation -->
+      <dependency>
+        <groupId>javax.validation</groupId>
+        <artifactId>validation-api</artifactId>
+        <version>${validation-api.version}</version>
+      </dependency>
+
+      <!-- Testing -->
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>junit-jupiter</artifactId>
+        <version>${testcontainers.version}</version>
+        <scope>test</scope>
+      </dependency>
+
+      <!-- Documentation -->
+      <dependency>
+        <groupId>capital.scalable</groupId>
+        <artifactId>spring-auto-restdocs-core</artifactId>
+        <version>${spring-auto-restdocs.version}</version>
+      </dependency>
+
+      <!-- 3rd Parties -->
+      <dependency>
+        <groupId>org.mapstruct</groupId>
+        <artifactId>mapstruct</artifactId>
+        <version>${mapstruct.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${maven.compiler.plugin.version}</version>
+          <configuration>
+            <source>${java.version}</source>
+            <target>${java.version}</target>
+            <compilerArgument>-Xlint:unchecked</compilerArgument>
+            <showDeprecation>true</showDeprecation>
+            <showWarnings>true</showWarnings>
+            <annotationProcessorPaths>
+              <path>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+              </path>
+              <path>
+                <groupId>org.mapstruct</groupId>
+                <artifactId>mapstruct-processor</artifactId>
+                <version>${mapstruct.version}</version>
+              </path>
+            </annotationProcessorPaths>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.projectlombok</groupId>
+          <artifactId>lombok-maven-plugin</artifactId>
+          <version>${lombok-maven-plugin.version}</version>
+          <configuration>
+            <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
+            <outputDirectory>${delombok.output}</outputDirectory>
+            <addOutputDirectory>false</addOutputDirectory>
+          </configuration>
+          <executions>
+            <execution>
+              <phase>generate-sources</phase>
+              <goals>
+                <goal>delombok</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>${jacoco.version}</version>
+          <configuration>
+            <destFile>${sonar.jacoco.reportPaths}</destFile>
+            <append>true</append>
+          </configuration>
+          <executions>
+            <execution>
+              <id>agent</id>
+              <goals>
+                <goal>prepare-agent</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>report</id>
+              <goals>
+                <goal>report</goal>
+              </goals>
+              <phase>verify</phase>
+            </execution>
+          </executions>
+        </plugin>
+
+        <!-- Testing -->
+        <!-- Unit -->
+        <plugin>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <configuration>
+            <skipTests>true</skipTests>
+            <includes>
+              <include>**/*Test.java</include>
+            </includes>
+            <excludedGroups>functional</excludedGroups>
+            <systemPropertyVariables>
+              <org.springframework.restdocs.outputDir>
+                ${snippets.directory}
+              </org.springframework.restdocs.outputDir>
+              <org.springframework.restdocs.javadocJsonDir>
+                ${project.build.directory}/generated-javadoc-json
+              </org.springframework.restdocs.javadocJsonDir>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+        <!-- Functional -->
+        <plugin>
+          <artifactId>maven-failsafe-plugin</artifactId>
+          <configuration>
+            <includes>
+              <include>**/*FunctionalTest.java</include>
+            </includes>
+            <systemPropertyVariables>
+              <org.springframework.restdocs.javadocJsonDir>
+                ${project.build.directory}/generated-javadoc-json
+              </org.springframework.restdocs.javadocJsonDir>
+              <org.springframework.restdocs.outputDir>
+                ${snippets.directory}
+              </org.springframework.restdocs.outputDir>
+            </systemPropertyVariables>
+          </configuration>
+        </plugin>
+
+        <!-- Documentation -->
+        <plugin>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <extensions>true</extensions>
+          <executions>
+            <execution>
+              <phase>compile</phase>
+              <goals>
+                <goal>javadoc-no-fork</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>attach-javadocs</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <finalName>user-services-documentation</finalName>
+            <doclet>capital.scalable.restdocs.jsondoclet.ExtractDocumentationAsJsonDoclet</doclet>
+            <docletArtifact>
+              <groupId>capital.scalable</groupId>
+              <artifactId>spring-auto-restdocs-json-doclet-jdk9</artifactId>
+              <version>${spring-auto-restdocs.version}</version>
+            </docletArtifact>
+            <reportOutputDirectory>${project.build.directory}</reportOutputDirectory>
+            <useStandardDocletOptions>false</useStandardDocletOptions>
+            <show>package</show>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.asciidoctor</groupId>
+          <artifactId>asciidoctor-maven-plugin</artifactId>
+          <version>${asciidoctor-maven-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>output-html</id>
+              <phase>post-integration-test</phase>
+              <goals>
+                <goal>process-asciidoc</goal>
+              </goals>
+              <configuration>
+                <backend>html</backend>
+                <doctype>book</doctype>
+                <attributes>
+                  <title>User Services Documentation</title>
+                  <toc>left</toc>
+                  <linkcss>false</linkcss>
+                  <snippets>${snippets.directory}</snippets>
+                </attributes>
+              </configuration>
+            </execution>
+          </executions>
+          <configuration>
+            <sourceDirectory>src/main/asciidoc</sourceDirectory>
+            <headerFooter>true</headerFooter>
+            <attributes>
+              <snippets>${snippets.directory}</snippets>
+              <source-highlighter>highlightjs</source-highlighter>
+            </attributes>
+          </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.springframework.restdocs</groupId>
+              <artifactId>spring-restdocs-asciidoctor</artifactId>
+              <version>2.0.5.RELEASE</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <artifactId>maven-resources-plugin</artifactId>
+          <version>${maven-resources-plugin.version}</version>
+          <executions>
+            <execution>
+              <id>copy-resources</id>
+              <phase>prepare-package</phase>
+              <goals>
+                <goal>copy-resources</goal>
+              </goals>
+              <configuration>
+                <outputDirectory>${project.build.outputDirectory}/static/docs</outputDirectory>
+                <resources>
+                  <resource>
+                    <directory>${project.build.directory}/generated-docs</directory>
+                  </resource>
+                </resources>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+  </build>
+
+  <reporting>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>${maven-surefire-report-plugin.version}</version>
+        <reportSets>
+          <reportSet>
+            <id>integration-tests</id>
+            <reports>
+              <report>failsafe-report-only</report>
+            </reports>
+          </reportSet>
+        </reportSets>
+      </plugin>
+    </plugins>
+  </reporting>
+</project>

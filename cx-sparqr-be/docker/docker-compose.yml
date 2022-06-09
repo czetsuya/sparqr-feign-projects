@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  database-be:
+    image: postgres:14.1
+    container_name: db-be
+    restart: "no"
+    ports:
+      - "54320:5432"
+    environment:
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: db_user_123
+      POSTGRES_DB: cx_be

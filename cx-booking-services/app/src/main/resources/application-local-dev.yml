@@ -1,0 +1,32 @@
+## Development configuration
+server:
+  port: 8003
+
+logging:
+  level:
+    root: INFO
+    com.sparqr: DEBUG
+    org.springframework: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: ERROR
+    org.apache.http: WARN
+    org.zalando.logbook: ${LOGBOOK_LOG:TRACE}
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:54323/cx_bookings}
+    username: ${DB_USERNAME:db_user}
+    password: ${DB_PASSWORD:db_user_123}
+  sql:
+    init:
+      mode: always
+  flyway:
+    user: ${DB_ADMIN_USERNAME:db_user}
+    password: ${DB_ADMIN_PASSWORD:db_user_123}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+cloud:
+  aws:
+    enable: false

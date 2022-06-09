@@ -1,0 +1,13 @@
+version: '3.9'
+
+services:
+  database-iam:
+    image: postgres:14.1
+    container_name: db-iam
+    restart: "no"
+    ports:
+      - "54321:5432"
+    environment:
+      POSTGRES_USER: db_user
+      POSTGRES_PASSWORD: db_user_123
+      POSTGRES_DB: cx_iam_users
